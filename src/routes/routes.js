@@ -1,9 +1,29 @@
 const express = require('express');
+
 const router = express.Router();
 
 const connection = require('../../database/connection');
 
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+
+const jwt = require('jsonwebtoken');
+
+const verificarToken = require('../Middleware/authorization');
+
+router.get('/meu-perfil', verificarToken, async (req, res)=>{
+    const usuario = req.usuario;
+
+    const aluno = await connection('alunos').where({id: usuario.id}).first();
+
+    if(!aluno){
+        return res.status(404).json({error: 'Aluno não encontrado'});
+    }
+
+    res.json({
+        id: aluno.id,
+        nome: aluno.nome
+    });
+})
 
 router.post('/login', async (req, res)=>{
     const {nome, senha} = req.body;
@@ -24,7 +44,21 @@ router.post('/login', async (req, res)=>{
         return res.status(401).json({error: 'Senha incorreta'});
     }
 
-    res.json({message: 'Login bem-sucedido', id: usuario.id, nome: usuario.nome});
+    const payload = {id: usuario.id, nome: usuario.nome, role:'aluno'};
+
+    const segredo = process.env.JWT_SECRET || 'meu-segredo-aqui';
+
+    const token = jwt.sign(
+        payload,
+        segredo,
+        { expiresIn: '1h'}
+    );
+
+    res.json({
+        message: 'Login bem-sucedido',
+        id: usuario.id,
+        nome: usuario.nome,
+        token});
 })
 
 router.post('/novo-aluno', async (req, res)=> {
@@ -93,8 +127,6 @@ router.post('/cadastrar-aluno', async (req, res) => {
     }
 })
 
-// buscar aluno id
-
 router.get('/aluno/:id', async(req, res)=> {
     try{
         const {id} = req.params;
@@ -107,7 +139,6 @@ router.get('/aluno/:id', async(req, res)=> {
     }
 });
 
-// atualizar aluno
 router.put('/aluno/:id', async(req, res)=>{
     try{
         const {id} = req.params;
@@ -124,7 +155,7 @@ router.put('/aluno/:id', async(req, res)=>{
         res.status(500).json({erro: 'Erro ao atualizar aluno'});
     }
 });
-// deletar aluno
+
 
 router.delete('/aluno/:id', async (req, res) => {
     try {
