@@ -8,6 +8,7 @@ exports.up = function(knex) {
     table.string('nome', 100).notNullable(); // VARCHAR de 100, obrigatório
     table.integer('idade').notNullable();
     table.integer('numero_chamada');
+    table.string('senha').notNullable();
     table.timestamps(true, true); // Cria colunas created_at e updated_at
   });
 };

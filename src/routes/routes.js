@@ -3,6 +3,60 @@ const router = express.Router();
 
 const connection = require('../../database/connection');
 
+const bcrypt = require('bcrypt')
+
+router.post('/login', async (req, res)=>{
+    const {nome, senha} = req.body;
+
+    if (!nome || !senha){
+        return res.status(400).json({error: 'Nome e senha obrigatorios'});
+    }
+
+    const usuario = await connection('alunos').where({nome}).first();
+
+    if (!usuario){
+        return res.status(404).json({error: 'Usuario não encontrado'});
+    }
+
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+    if(!senhaValida){
+        return res.status(401).json({error: 'Senha incorreta'});
+    }
+
+    res.json({message: 'Login bem-sucedido', id: usuario.id, nome: usuario.nome});
+})
+
+router.post('/novo-aluno', async (req, res)=> {
+    const {nome, idade, numero_chamada, senha} = req.body;
+    if (!nome || !idade || !numero_chamada || !senha){
+        return res.status(400).json({error: 'Todos os campos são obrigatorios'});
+    }
+
+    const saltRounds = 10;
+
+    const hashSenha = await bcrypt.hash(senha, saltRounds);
+
+    try{
+        const [id] = await connection('alunos')
+            .insert({nome, idade, numero_chamada, senha: hashSenha});
+
+        if (!id){
+            return res.status(400).json({error: 'Erro ao cadastrar aluno'});
+        }
+
+        res.status(201)
+            .json({messagem: 'Aluno cadastrado com sucesso',
+                id,
+                nome,
+                idade,
+                numero_chamada
+            });
+    }catch (error){
+        res.status(500).json({error: 'Erro ao cadastrar aluno'});
+    }
+})
+
 router.get('/ping', (req, res) =>{
     res.json({ message: 'pong' });
 });
